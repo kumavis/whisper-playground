@@ -9,6 +9,7 @@ import SettingsSections from "./SettingsSection";
 import { ReactMic } from 'react-mic';
 import axios from "axios";
 import { PulseLoader } from "react-spinners";
+import hark from 'hark/hark.bundle.js'
 
 const useStyles = () => ({
   root: {
@@ -76,6 +77,7 @@ const App = ({ classes }) => {
   }
 
   function stopRecording() {
+    console.log('stopRecording')
     clearInterval(intervalRef.current);
     setStopTranscriptionSession(true)
     setIsRecording(false)
@@ -86,17 +88,32 @@ const App = ({ classes }) => {
     // console.log('chunk of real-time data is: ', recordedBlob);
   }
 
+  function onStream (stream) {
+    var speechEvents = hark(stream, {});
+
+    speechEvents.on('speaking', function() {
+      console.log('speaking');
+    });
+
+    speechEvents.on('stopped_speaking', function() {
+      console.log('stopped_speaking');
+      transcribeInterim()
+    });
+  }
+
   function onStop(recordedBlob) {
+    console.log('on stop')
     transcribeRecording(recordedBlob)
     setIsTranscribing(true)  
   }
 
   function transcribeInterim() {
+    console.log('transcribeInterim')
     clearInterval(intervalRef.current);
     setIsRecording(false)
   }
 
-  function transcribeRecording(recordedBlob) {
+  async function transcribeRecording(recordedBlob) {
     const headers = {
       "content-type": "multipart/form-data",
     };
@@ -108,12 +125,13 @@ const App = ({ classes }) => {
       .then((res) => {
         setTranscribedData(oldData => [...oldData, res.data])
         setIsTranscribing(false)
+        clearInterval(intervalRef.current);
         intervalRef.current = setInterval(transcribeInterim, transcribeTimeout * 1000)
       });
       
-      if (!stopTranscriptionSessionRef.current){
-        setIsRecording(true)    
-      }
+    if (!stopTranscriptionSessionRef.current){
+      setIsRecording(true)    
+    }
   }
 
   return (
@@ -133,9 +151,18 @@ const App = ({ classes }) => {
         {(isRecording || isTranscribing) && <Button onClick={stopRecording} variant="danger" disabled={stopTranscriptionSessionRef.current}>Stop</Button>}
       </div>
 
+      {JSON.stringify({isRecording, isTranscribing})}
+
       <div className="recordIllustration">
-        <ReactMic record={isRecording} className="sound-wave" onStop={onStop}
-          onData={onData} strokeColor="#0d6efd" backgroundColor="#f6f6ef" />
+        <ReactMic
+          record={isRecording}
+          className="sound-wave"
+          onStop={onStop}
+          onData={onData}
+          onStream={onStream}
+          strokeColor="#0d6efd"
+          backgroundColor="#f6f6ef"
+        />
       </div>
 
       <div>

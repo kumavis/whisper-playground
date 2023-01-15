@@ -40,3 +40,6 @@ scoop install ffmpeg
 
 # License
 This repository and the code and model weights of Whisper are released under the MIT License.
+
+### kumavis sez:
+- gotta yarn link `react-mic`, `hark`
